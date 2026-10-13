@@ -1,0 +1,9 @@
+# i  V_i(16)  reduced(n,i)  ceil(log2|C|)  LB_best  15+LB_best  verdict
+  1  15       ( 4,1)              2        3          18  REFUTED (15+LB > V)
+  2  18       ( 9,2)              5        6          21  REFUTED (15+LB > V)
+  3  21       (10,3)              6        7          22  REFUTED (15+LB > V)
+  4  24       (12,4)              7        8          23  not refuted (slack 1 for the endgame)
+  5  26       (14,5)              8        9          24  not refuted (slack 2 for the endgame)
+  6  27       (15,6)              8       10          25  not refuted (slack 2 for the endgame)
+  7  28       (16,7)              9       11          26  not refuted (slack 2 for the endgame)
+  8  28-29    (15,7)              9       12          27  not refuted (slack 1 for the endgame)

@@ -1,0 +1,7 @@
+ACCEPT  certificates/V7_16_le28/select_7th_of_16_28cmp_alt.rs
+  n = 16, i = 7 (1-based; 0-based rank 6)
+  worst-case comparisons = 28
+  functions = 365, call sites = 728 (0 with !is_dual), comparison sites = 364, leaf returns = 1, max arity = 16
+  doc-comment relations: 3057 claimed, 0 not implied by the computed preconditions (not used for correctness)
+  time = 0.036 s
+verifier exit=0

@@ -1,0 +1,18 @@
+[package]
+name = "xcheck"
+version = "0.1.0"
+edition = "2021"
+description = "cross-check: old code/core (u16, u128 keys) vs code/core32 (u32, 192-bit keys) on n <= 16"
+
+# Own workspace root (not part of core32's package).
+[workspace]
+
+[dependencies]
+old = { package = "selcore", path = "../../core" }
+new = { package = "selcore32", path = ".." }
+
+[profile.release]
+opt-level = 3
+debug = 1
+codegen-units = 1
+panic = "abort"

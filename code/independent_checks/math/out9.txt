@@ -1,0 +1,61 @@
+n=1 posets=1 time=0.0s  V_i(E_n): 0
+n=2 posets=2 time=0.0s  V_i(E_n): 1 1
+n=3 posets=5 time=0.0s  V_i(E_n): 2 3 2
+n=4 posets=16 time=0.0s  V_i(E_n): 3 4 4 3
+n=5 posets=63 time=0.0s  V_i(E_n): 4 6 6 6 4
+n=6 posets=318 time=0.0s  V_i(E_n): 5 7 8 8 7 5
+n=7 posets=2045 time=0.0s  V_i(E_n): 6 8 10 10 10 8 6
+n=8 posets=16999 time=0.4s  V_i(E_n): 7 9 11 12 12 11 9 7
+n=9 posets=183231 time=7.7s  V_i(E_n): 8 11 12 14 14 14 12 11 8
+n=1 problems(P up to iso, all i)=1 unsolved=0 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=0 (of which P unsolved for i: 0) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 0/0 unsolved (0.0000); reduced&unsolved 0/0 (0.0000)
+     LB==V 1/1, ceil(lgPhi)==V 1, KEY>ceil(lgPhi) 0; avg gap V-LB 0.000, V-ceil(lg|C|) 0.000
+n=2 problems(P up to iso, all i)=4 unsolved=2 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=2 (of which P unsolved for i: 2) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 2/2 unsolved (1.0000); reduced&unsolved 2/2 (1.0000)
+     LB==V 4/4, ceil(lgPhi)==V 4, KEY>ceil(lgPhi) 0; avg gap V-LB 0.000, V-ceil(lg|C|) 0.000
+n=3 problems(P up to iso, all i)=15 unsolved=10 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=21 (of which P unsolved for i: 19) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 10/10 unsolved (1.0000); reduced&unsolved 4/4 (1.0000)
+     LB==V 15/15, ceil(lgPhi)==V 15, KEY>ceil(lgPhi) 0; avg gap V-LB 0.000, V-ceil(lg|C|) 0.000
+n=4 problems(P up to iso, all i)=64 unsolved=50 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=176 (of which P unsolved for i: 160) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 50/50 unsolved (1.0000); reduced&unsolved 10/10 (1.0000)
+     LB==V 64/64, ceil(lgPhi)==V 64, KEY>ceil(lgPhi) 0; avg gap V-LB 0.000, V-ceil(lg|C|) 0.062
+n=5 problems(P up to iso, all i)=315 unsolved=269 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=1430 (of which P unsolved for i: 1324) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 269/269 unsolved (1.0000); reduced&unsolved 27/27 (1.0000)
+     LB==V 315/315, ceil(lgPhi)==V 314, KEY>ceil(lgPhi) 1; avg gap V-LB 0.000, V-ceil(lg|C|) 0.146
+n=6 problems(P up to iso, all i)=1908 unsolved=1730 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=13170 (of which P unsolved for i: 12472) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 1730/1730 unsolved (1.0000); reduced&unsolved 100/100 (1.0000)
+     LB==V 1890/1908, ceil(lgPhi)==V 1874, KEY>ceil(lgPhi) 16; avg gap V-LB 0.009, V-ceil(lg|C|) 0.245
+n=7 problems(P up to iso, all i)=14315 unsolved=13464 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=140861 (of which P unsolved for i: 135621) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 13460/13464 unsolved (0.9997); reduced&unsolved 440/444 (0.9910)
+     LB==V 13820/14315, ceil(lgPhi)==V 13601, KEY>ceil(lgPhi) 219; avg gap V-LB 0.035, V-ceil(lg|C|) 0.360
+n=8 problems(P up to iso, all i)=135992 unsolved=130854 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=1824072 (of which P unsolved for i: 1777502) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 130714/130854 unsolved (0.9989); reduced&unsolved 2566/2636 (0.9734)
+     LB==V 125516/135992, ceil(lgPhi)==V 122508, KEY>ceil(lgPhi) 3008; avg gap V-LB 0.077, V-ceil(lg|C|) 0.492
+n=9 problems(P up to iso, all i)=1649079 unsolved=1608833 | viol: ceil(lgPhi)>V 0, KEY>V 0, Phi>Lmin 0, |C|>Lmin 0, FG|FGd>Lmin 0
+     local ineq: (P up to iso, i, labelled unordered incomparable pair) cases=29079468 (of which P unsolved for i: 28568638) viol=0
+     ceil(lgPhi)==ceil(lgLmin): 1603557/1608833 unsolved (0.9967); reduced&unsolved 19395/20439 (0.9489)
+     LB==V 1430337/1649079, ceil(lgPhi)==V 1384647, KEY>ceil(lgPhi) 45765; avg gap V-LB 0.133, V-ceil(lg|C|) 0.641
+J: |Q|=1 cases(2<=i<=|Q|)=0 violations=0   (rank i=1 fails: 1)
+J: |Q|=2 cases(2<=i<=|Q|)=2 violations=0   (rank i=1 fails: 2)
+J: |Q|=3 cases(2<=i<=|Q|)=10 violations=0   (rank i=1 fails: 5)
+J: |Q|=4 cases(2<=i<=|Q|)=48 violations=0   (rank i=1 fails: 16)
+J: |Q|=5 cases(2<=i<=|Q|)=252 violations=0   (rank i=1 fails: 63)
+J: |Q|=6 cases(2<=i<=|Q|)=1590 violations=0   (rank i=1 fails: 318)
+J: |Q|=7 cases(2<=i<=|Q|)=12270 violations=0   (rank i=1 fails: 2045)
+J: |Q|=8 cases(2<=i<=|Q|)=118993 violations=0   (rank i=1 fails: 16999)
+reduction n=2 single-deletion cases=2  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=3 single-deletion cases=16  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=4 single-deletion cases=104  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=5 single-deletion cases=688  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=6 single-deletion cases=5150  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=7 single-deletion cases=45644  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=8 single-deletion cases=495926  V changed=0  (FG,FGd,|C|,KEY) changed=0
+reduction n=9 single-deletion cases=6730528  V changed=0  (FG,FGd,|C|,KEY) changed=0

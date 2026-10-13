@@ -1,0 +1,17 @@
+[package]
+name = "selcore"
+version = "0.1.0"
+edition = "2021"
+description = "Exact selection-complexity core: u16-bitset posets, exact canonical forms, exact solver"
+
+[dependencies]
+
+[profile.release]
+opt-level = 3
+debug = 1
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+
+[profile.test]
+opt-level = 3

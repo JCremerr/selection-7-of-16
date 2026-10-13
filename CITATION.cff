@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use these certificates or this code, please cite the paper."
+title: "Selecting the 7th Smallest of 16 Elements Takes Exactly 28 Comparisons: code, certificates and Lean proofs"
+authors:
+  - family-names: Cremer
+    given-names: Jonathan
+license: CC-BY-4.0
+# TODO: add preferred-citation (the paper) and repository-code once published.

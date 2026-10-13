@@ -1,0 +1,7 @@
+ACCEPT  certificates/V8_17_le31/select_8th_of_17_31cmp.rs
+  n = 17, i = 8 (1-based; 0-based rank 7)
+  worst-case comparisons = 31
+  functions = 1077, call sites = 2152 (0 with !is_dual), comparison sites = 1076, leaf returns = 1, max arity = 17
+  doc-comment relations: 9930 claimed, 0 not implied by the computed preconditions (not used for correctness)
+  time = 0.101 s
+verifier exit=0

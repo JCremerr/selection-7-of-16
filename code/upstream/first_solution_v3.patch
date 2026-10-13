@@ -1,0 +1,182 @@
+diff --git a/src/main.rs b/src/main.rs
+index 3b7c132..8ab25b1 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -110,6 +110,10 @@ struct Args {
+     /// Weight function to use for forward search
+     #[arg(long, default_value = "w")]
+     weight_function: WeightFunction,
++    /// [patch] Fixed budget k: search once with k and stop at the FIRST
++    /// solution found at every node (no optimization, no iterative deepening).
++    #[arg(long)]
++    budget: Option<u8>,
+ }
+ 
+ fn main() {
+@@ -154,9 +158,9 @@ fn run_forward(args: &Args) {
+ 
+         for i in start_i..(n + 1) / 2 {
+             let result =
+-                Search::new(n, i, &mut cache, &mut algorithm, use_bidirectional_search, args.weight_function).search();
++                Search::new(n, i, &mut cache, &mut algorithm, use_bidirectional_search, args.weight_function, args.budget).search();
+ 
+-            if (n as usize) < KNOWN_VALUES.len() && (i as usize) < KNOWN_VALUES[n as usize].len() {
++            if args.budget.is_none() && (n as usize) < KNOWN_VALUES.len() && (i as usize) < KNOWN_VALUES[n as usize].len() {
+                 assert_eq!(result, KNOWN_VALUES[n as usize][i as usize] as u8);
+             }
+ 
+diff --git a/src/search_forward.rs b/src/search_forward.rs
+index a682798..7431da1 100644
+--- a/src/search_forward.rs
++++ b/src/search_forward.rs
+@@ -21,6 +21,18 @@ pub struct Search<'a> {
+     comparisons: &'a mut HashMap<PseudoCanonifiedPoset, (u8, u8)>,
+     use_bidirectional_search: bool,
+     weight_function: WeightFunction,
++    /// [patch] first-solution mode with fixed budget
++    budget: Option<u8>,
++    /// [patch] cache hits with Solved(v), v > budget, that had to be re-searched
++    resolves: u64,
++    /// [patch] lower bounds for posets whose cache entry is Solved(v) (an upper
++    /// bound only, in first-solution mode); prevents repeated re-searches
++    lb_map: HashMap<PseudoCanonifiedPoset, u8>,
++    /// [patch] env SELGEN_OR_ORDER=cs: order comparisons by the compatible-
++    /// solution counts of the worse child (ascending)
++    or_cs: bool,
++    /// [patch] env SELGEN_AND_HARD_FIRST=1: search the harder child first
++    and_hard_first: bool,
+ }
+ 
+ #[derive(Debug, Clone, Copy)]
+@@ -62,6 +74,7 @@ impl<'a> Search<'a> {
+         comparisons: &'a mut HashMap<PseudoCanonifiedPoset, (u8, u8)>,
+         use_bidirectional_search: bool,
+         weight_function: WeightFunction,
++        budget: Option<u8>,
+     ) -> Self {
+         Search {
+             n,
+@@ -72,6 +85,11 @@ impl<'a> Search<'a> {
+             comparisons,
+             use_bidirectional_search,
+             weight_function,
++            budget,
++            resolves: 0,
++            lb_map: HashMap::new(),
++            or_cs: std::env::var("SELGEN_OR_ORDER").map(|v| v == "cs").unwrap_or(false),
++            and_hard_first: std::env::var("SELGEN_AND_HARD_FIRST").is_ok(),
+         }
+     }
+ 
+@@ -87,6 +105,12 @@ impl<'a> Search<'a> {
+ 
+     fn insert_cache(&mut self, poset: PseudoCanonifiedPoset, new_cost: Cost) {
+         if let Some(cost) = self.cache.get(&poset) {
++            if self.budget.is_some() {
++                if let (Cost::Solved(_), Cost::Minimum(m)) = (cost, new_cost) {
++                    let e = self.lb_map.entry(poset).or_insert(0);
++                    *e = (*e).max(m);
++                }
++            }
+             let res = match (cost, new_cost) {
+                 (Cost::Minimum(old_min), Cost::Minimum(new_min)) => {
+                     Cost::Minimum(new_min.max(old_min))
+@@ -115,7 +139,10 @@ impl<'a> Search<'a> {
+ 
+         let start = Instant::now();
+ 
+-        let min = LOWER_BOUNDS[self.n as usize][self.i as usize];
++        let min = match self.budget {
++            Some(k) => k as usize,
++            None => LOWER_BOUNDS[self.n as usize][self.i as usize],
++        };
+         let max = UPPER_BOUNDS[self.n as usize][self.i as usize];
+ 
+         let mut result = max as u8;
+@@ -175,6 +202,11 @@ impl<'a> Search<'a> {
+                     );
+                     println!("{}", format_duration(start));
+ 
++                    if self.budget.is_some() {
++                        println!("[patch] no algorithm within budget (exhaustive under first-solution mode); resolves: {}", self.resolves);
++                        return 0;
++                    }
++
+                     continue;
+                 }
+             };
+@@ -190,6 +222,9 @@ impl<'a> Search<'a> {
+             self.n, self.i
+         );
+         println!("Comparisons: {result}");
++        if self.budget.is_some() {
++            println!("[patch] budget: {:?}, resolves: {}, lb_map: {}, or_cs: {}, and_hard_first: {}", self.budget, self.resolves, self.lb_map.len(), self.or_cs, self.and_hard_first);
++        }
+         println!();
+ 
+         self.print_cache();
+@@ -217,8 +252,19 @@ impl<'a> Search<'a> {
+ 
+         if let Some(cost) = self.search_cache(&poset) {
+             match cost {
+-                Cost::Solved(_) => {
+-                    return cost;
++                Cost::Solved(solved) => {
++                    // [patch] in first-solution mode Solved(v) is only an upper
++                    // bound; if it exceeds the current budget, search again.
++                    if self.budget.is_some() && solved > max_comparisons {
++                        if let Some(&lb) = self.lb_map.get(&poset) {
++                            if lb > max_comparisons {
++                                return Cost::Minimum(lb);
++                            }
++                        }
++                        self.resolves += 1;
++                    } else {
++                        return cost;
++                    }
+                 }
+                 Cost::Minimum(min) => {
+                     if min > max_comparisons {
+@@ -252,7 +298,29 @@ impl<'a> Search<'a> {
+             return result;
+         }
+ 
+-        let pairs = poset.get_comparison_pairs();
++        let mut pairs = poset.get_comparison_pairs();
++        if self.or_cs {
++            // [patch] key = (C of harder child, C of easier child); harder first
++            let mut keyed: Vec<_> = pairs
++                .into_iter()
++                .map(|(a, b, i, j)| {
++                    let ca = a.num_compatible_posets();
++                    let cb = b.num_compatible_posets();
++                    if ca >= cb {
++                        ((ca, cb), (a, b, i, j))
++                    } else {
++                        ((cb, ca), (b, a, i, j))
++                    }
++                })
++                .collect();
++            keyed.sort_by_key(|k| k.0);
++            pairs = keyed.into_iter().map(|k| k.1).collect();
++            if !self.and_hard_first {
++                pairs = pairs.into_iter().map(|(a, b, i, j)| (b, a, i, j)).collect();
++            }
++        } else if self.and_hard_first {
++            pairs = pairs.into_iter().map(|(a, b, i, j)| (b, a, i, j)).collect();
++        }
+         let n_pairs = pairs.len() as u64;
+ 
+         self.analytics.inc_length(depth, n_pairs);
+@@ -294,6 +362,11 @@ impl<'a> Search<'a> {
+             current_best = first_result.value().max(second_result.value()) + 1;
+ 
+             self.analytics.inc(depth, 1);
++
++            // [patch] first-solution mode: accept the first working comparison
++            if self.budget.is_some() {
++                break;
++            }
+         }
+ 
+         let result = if current_best <= max_comparisons {

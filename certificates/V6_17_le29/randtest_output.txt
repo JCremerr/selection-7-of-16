@@ -1,0 +1,2 @@
+OK: 20000000 random permutations, N = 17, I(0-based) = 5
+randtest exit=0

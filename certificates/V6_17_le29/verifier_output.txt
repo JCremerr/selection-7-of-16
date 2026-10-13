@@ -1,0 +1,7 @@
+ACCEPT  certificates/V6_17_le29/select_6th_of_17_29cmp.rs
+  n = 17, i = 6 (1-based; 0-based rank 5)
+  worst-case comparisons = 29
+  functions = 266, call sites = 530 (0 with !is_dual), comparison sites = 265, leaf returns = 1, max arity = 17
+  doc-comment relations: 2126 claimed, 0 not implied by the computed preconditions (not used for correctness)
+  time = 0.024 s
+verifier exit=0

@@ -1,0 +1,6 @@
+V7main  i=7 reduce(R16) = (16,7): 1 function(s) [('select_314', 15)]
+V7alt   i=7 reduce(R16) = (16,7): 1 function(s) [('select_350', 15)]
+V8main  i=8 reduce(R16) = (15,7): 1 function(s) [('select_15', 15)]
+V8alt   i=8 reduce(R16) = (15,7): 0 function(s) []
+up15_7  n = 15, R16 impossible
+up16_6  i=6 reduce(R16) = (15,6): 0 function(s) []

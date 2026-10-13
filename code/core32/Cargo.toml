@@ -1,0 +1,23 @@
+[package]
+name = "selcore32"
+version = "0.1.0"
+edition = "2021"
+description = "Port of code/core to n <= 19: u32-bitset posets, 192-bit canonical keys, df-pn solver"
+
+# The library keeps the crate name `selcore`, so the binaries and tests are
+# unchanged copies of code/core apart from the width changes.
+[lib]
+name = "selcore"
+path = "src/lib.rs"
+
+[dependencies]
+
+[profile.release]
+opt-level = 3
+debug = 1
+codegen-units = 1
+lto = "thin"
+panic = "abort"
+
+[profile.test]
+opt-level = 3

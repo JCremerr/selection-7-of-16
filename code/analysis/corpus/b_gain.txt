@@ -1,0 +1,13 @@
+n=all: rows 1663507; LB exact 165808 (10.0%), avg gap 1.133; max(C1,KEY) exact 311073 (18.7%), avg gap 0.875; C1 raises LB on 429803 rows
+n=2: rows 1; LB exact 1 (100.0%), avg gap 0.000; max(C1,KEY) exact 1 (100.0%), avg gap 0.000; C1 raises LB on 0 rows
+n=3: rows 3; LB exact 3 (100.0%), avg gap 0.000; max(C1,KEY) exact 3 (100.0%), avg gap 0.000; C1 raises LB on 0 rows
+n=4: rows 5; LB exact 5 (100.0%), avg gap 0.000; max(C1,KEY) exact 5 (100.0%), avg gap 0.000; C1 raises LB on 0 rows
+n=5: rows 17; LB exact 17 (100.0%), avg gap 0.000; max(C1,KEY) exact 17 (100.0%), avg gap 0.000; C1 raises LB on 0 rows
+n=6: rows 50; LB exact 41 (82.0%), avg gap 0.180; max(C1,KEY) exact 41 (82.0%), avg gap 0.180; C1 raises LB on 0 rows
+n=7: rows 239; LB exact 162 (67.8%), avg gap 0.322; max(C1,KEY) exact 181 (75.7%), avg gap 0.243; C1 raises LB on 19 rows
+n=8: rows 1251; LB exact 742 (59.3%), avg gap 0.410; max(C1,KEY) exact 810 (64.7%), avg gap 0.353; C1 raises LB on 72 rows
+n=9: rows 8223; LB exact 3543 (43.1%), avg gap 0.580; max(C1,KEY) exact 4281 (52.1%), avg gap 0.480; C1 raises LB on 825 rows
+n=10: rows 57371; LB exact 16395 (28.6%), avg gap 0.747; max(C1,KEY) exact 23077 (40.2%), avg gap 0.602; C1 raises LB on 8357 rows
+n=11: rows 357116; LB exact 57976 (16.2%), avg gap 0.951; max(C1,KEY) exact 96467 (27.0%), avg gap 0.750; C1 raises LB on 71724 rows
+n=12: rows 1239231; LB exact 86923 (7.0%), avg gap 1.209; max(C1,KEY) exact 186190 (15.0%), avg gap 0.927; C1 raises LB on 348806 rows
+464.91 s, 13216 KB

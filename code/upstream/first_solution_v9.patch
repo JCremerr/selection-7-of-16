@@ -1,0 +1,445 @@
+diff --git a/src/main.rs b/src/main.rs
+index 3b7c132..144ddfa 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -63,6 +63,10 @@ pub enum WeightFunction {
+     Weight0,
+     Weight,
+     None,
++    /// [patch] LB_best (Phi* and KEY), see poset.rs
++    Phi,
++    /// [patch] both Weight and Phi
++    PhiW,
+ }
+ 
+ impl FromStr for WeightFunction {
+@@ -74,6 +78,8 @@ impl FromStr for WeightFunction {
+             "w0" => Ok(WeightFunction::Weight0),
+             "w" => Ok(WeightFunction::Weight),
+             "none" => Ok(WeightFunction::None),
++            "phi" => Ok(WeightFunction::Phi),
++            "phiw" => Ok(WeightFunction::PhiW),
+             _ => Err(Error::new(ErrorKind::InvalidValue)),
+         }
+     }
+@@ -110,6 +116,10 @@ struct Args {
+     /// Weight function to use for forward search
+     #[arg(long, default_value = "w")]
+     weight_function: WeightFunction,
++    /// [patch] Fixed budget k: search once with k and stop at the FIRST
++    /// solution found at every node (no optimization, no iterative deepening).
++    #[arg(long)]
++    budget: Option<u8>,
+ }
+ 
+ fn main() {
+@@ -154,9 +164,9 @@ fn run_forward(args: &Args) {
+ 
+         for i in start_i..(n + 1) / 2 {
+             let result =
+-                Search::new(n, i, &mut cache, &mut algorithm, use_bidirectional_search, args.weight_function).search();
++                Search::new(n, i, &mut cache, &mut algorithm, use_bidirectional_search, args.weight_function, args.budget).search();
+ 
+-            if (n as usize) < KNOWN_VALUES.len() && (i as usize) < KNOWN_VALUES[n as usize].len() {
++            if args.budget.is_none() && (n as usize) < KNOWN_VALUES.len() && (i as usize) < KNOWN_VALUES[n as usize].len() {
+                 assert_eq!(result, KNOWN_VALUES[n as usize][i as usize] as u8);
+             }
+ 
+diff --git a/src/poset.rs b/src/poset.rs
+index fa13597..77f3374 100644
+--- a/src/poset.rs
++++ b/src/poset.rs
+@@ -16,6 +16,73 @@ pub trait Poset: Sized + Debug {
+     /// returns a bitset of all elements less than i
+     fn get_all_less_than(&self, i: u8) -> BitSet;
+ 
++    /// [patch] LB_best = max(ceil(log2(FG + FGdual - |C|)), KEY): a proven lower
++    /// bound on the remaining comparisons (code/analysis/LOWER_BOUNDS.txt,
++    /// Thms 2 and 4). self.i() = number of elements below the answer (k).
++    /// Requires indices to be a linear extension (lower triangular storage).
++    fn lb_best(&self) -> u32 {
++        let (c, fg, fgd, key) = self.lb_stats();
++        if c == 0 {
++            return u32::MAX; // no compatible solution: inconsistent (cannot happen)
++        }
++        let phi = fg + fgd - c;
++        let lb_phi = if phi <= 1 { 0 } else { 64 - (phi - 1).leading_zeros() };
++        lb_phi.max(key)
++    }
++
++    /// [patch] (|C|, FG, FGdual, KEY) in one pass over the down-sets of size k
++    fn lb_stats(&self) -> (u64, u64, u64, u32) {
++        let n = self.n() as usize;
++        let k = self.i() as usize;
++        let mut down = [0u16; MAX_N];
++        let mut up = [0u16; MAX_N];
++        for x in 0..n {
++            down[x] = self.get_all_less_than(x as u8).bits();
++            up[x] = self.get_all_greater_than(x as u8).bits();
++            // linear-extension order is required by the down-set DFS below
++            assert!(down[x] >> x == 0, "lb_best: index order is not a linear extension");
++        }
++        let full: u16 = if n >= 16 { u16::MAX } else { (1u16 << n) - 1 };
++        // acc = (C, FG, FGdual, KEY)
++        let mut acc = (0u64, 0u64, 0u64, 0u32);
++        #[allow(clippy::too_many_arguments)]
++        fn rec(p: usize, n: usize, k: usize, l: u16, cnt: usize, down: &[u16; MAX_N],
++               up: &[u16; MAX_N], full: u16, acc: &mut (u64, u64, u64, u32)) {
++            if cnt == k {
++                let m = full & !l;
++                let mut min_m = 0u16;
++                let mut max_l = 0u16;
++                for x in 0..n {
++                    let bx = 1u16 << x;
++                    if m & bx != 0 && down[x] & m == 0 { min_m |= bx; }
++                    if l & bx != 0 && up[x] & l == 0 { max_l |= bx; }
++                }
++                let b = min_m.count_ones() - 1;
++                acc.0 += b as u64 + 1;
++                acc.1 += 1u64 << b;
++                let mut es = min_m;
++                while es != 0 {
++                    let e = es.trailing_zeros() as usize;
++                    es &= es - 1;
++                    let rest = max_l & !down[e];
++                    let a = rest.count_ones();
++                    acc.3 = acc.3.max(a + b);
++                    if (rest as u32) >> e == 0 {
++                        acc.2 += 1u64 << a;
++                    }
++                }
++                return;
++            }
++            if p == n || n - p < k - cnt { return; }
++            if down[p] & !l == 0 {
++                rec(p + 1, n, k, l | (1u16 << p), cnt + 1, down, up, full, acc);
++            }
++            rec(p + 1, n, k, l, cnt, down, up, full, acc);
++        }
++        rec(0, n, k, 0, 0, &down, &up, full, &mut acc);
++        acc
++    }
++
+     /// is either i < j or j < i?
+     #[inline]
+     fn has_order(&self, i: u8, j: u8) -> bool {
+diff --git a/src/search_forward.rs b/src/search_forward.rs
+index a682798..df4a015 100644
+--- a/src/search_forward.rs
++++ b/src/search_forward.rs
+@@ -21,6 +21,37 @@ pub struct Search<'a> {
+     comparisons: &'a mut HashMap<PseudoCanonifiedPoset, (u8, u8)>,
+     use_bidirectional_search: bool,
+     weight_function: WeightFunction,
++    /// [patch] first-solution mode with fixed budget
++    budget: Option<u8>,
++    /// [patch] cache hits with Solved(v), v > budget, that had to be re-searched
++    resolves: u64,
++    /// [patch] lower bounds for posets whose cache entry is Solved(v) (an upper
++    /// bound only, in first-solution mode); prevents repeated re-searches
++    lb_map: HashMap<PseudoCanonifiedPoset, u8>,
++    /// [patch] env SELGEN_OR_ORDER=cs: order comparisons by the compatible-
++    /// solution counts of the worse child (ascending)
++    or_cs: bool,
++    /// [patch] env SELGEN_AND_HARD_FIRST=1: search the harder child first
++    and_hard_first: bool,
++    /// [patch] env SELGEN_OR_ORDER=phi: order by Phi* (FG + FGdual - |C|) of
++    /// the worse child, then of the better child (ascending)
++    or_phi: bool,
++    /// [patch] env SELGEN_WIDTH=w: only the first w comparisons (after
++    /// ordering) are tried at each node. INCOMPLETE: failures are not proofs
++    /// (fine for upper bounds; never use for lower-bound claims).
++    width: usize,
++    /// [patch] env SELGEN_SEED / SELGEN_NOISE: multiply each pair's primary
++    /// Phi* key by (1 + noise * u), u in [0,1) a deterministic hash of
++    /// (seed, children). Same poset -> same order across visits.
++    seed: u64,
++    noise: f64,
++    /// [patch] env SELGEN_TABLE=path (ground-truth TSV: n, i1, V, above-masks
++    /// hex): exact values keyed by upstream's exact normal form; used as an
++    /// endgame tablebase for refutation (V > budget -> Minimum(V)).
++    table: HashMap<BackwardsPoset, u8>,
++    table_maxn: u8,
++    table_hits: u64,
++    table_cuts: u64,
+ }
+ 
+ #[derive(Debug, Clone, Copy)]
+@@ -62,6 +93,7 @@ impl<'a> Search<'a> {
+         comparisons: &'a mut HashMap<PseudoCanonifiedPoset, (u8, u8)>,
+         use_bidirectional_search: bool,
+         weight_function: WeightFunction,
++        budget: Option<u8>,
+     ) -> Self {
+         Search {
+             n,
+@@ -72,6 +104,19 @@ impl<'a> Search<'a> {
+             comparisons,
+             use_bidirectional_search,
+             weight_function,
++            budget,
++            resolves: 0,
++            lb_map: HashMap::new(),
++            or_cs: std::env::var("SELGEN_OR_ORDER").map(|v| v == "cs").unwrap_or(false),
++            or_phi: std::env::var("SELGEN_OR_ORDER").map(|v| v == "phi").unwrap_or(false),
++            width: std::env::var("SELGEN_WIDTH").ok().and_then(|v| v.parse().ok()).unwrap_or(usize::MAX),
++            seed: std::env::var("SELGEN_SEED").ok().and_then(|v| v.parse().ok()).unwrap_or(0),
++            table: load_table(),
++            table_maxn: std::env::var("SELGEN_TABLE_MAXN").ok().and_then(|v| v.parse().ok()).unwrap_or(12),
++            table_hits: 0,
++            table_cuts: 0,
++            noise: std::env::var("SELGEN_NOISE").ok().and_then(|v| v.parse().ok()).unwrap_or(0.0),
++            and_hard_first: std::env::var("SELGEN_AND_HARD_FIRST").is_ok(),
+         }
+     }
+ 
+@@ -87,6 +132,12 @@ impl<'a> Search<'a> {
+ 
+     fn insert_cache(&mut self, poset: PseudoCanonifiedPoset, new_cost: Cost) {
+         if let Some(cost) = self.cache.get(&poset) {
++            if self.budget.is_some() {
++                if let (Cost::Solved(_), Cost::Minimum(m)) = (cost, new_cost) {
++                    let e = self.lb_map.entry(poset).or_insert(0);
++                    *e = (*e).max(m);
++                }
++            }
+             let res = match (cost, new_cost) {
+                 (Cost::Minimum(old_min), Cost::Minimum(new_min)) => {
+                     Cost::Minimum(new_min.max(old_min))
+@@ -115,7 +166,10 @@ impl<'a> Search<'a> {
+ 
+         let start = Instant::now();
+ 
+-        let min = LOWER_BOUNDS[self.n as usize][self.i as usize];
++        let min = match self.budget {
++            Some(k) => k as usize,
++            None => LOWER_BOUNDS[self.n as usize][self.i as usize],
++        };
+         let max = UPPER_BOUNDS[self.n as usize][self.i as usize];
+ 
+         let mut result = max as u8;
+@@ -143,6 +197,22 @@ impl<'a> Search<'a> {
+ 
+             let mut poset = FreePoset::new(self.n, self.i);
+             let mut comparisons_done = 0u8;
++            // [patch] env SELGEN_START="a<b,c<d,...": start from this poset;
++            // each listed relation counts as one comparison already spent.
++            // Only meaningful for openings whose outcomes are all isomorphic
++            // (e.g. knockout tournaments). The printed algorithm is then NOT
++            // a full certificate (it does not contain the opening).
++            if let Ok(start) = std::env::var("SELGEN_START") {
++                for rel in start.split(',').filter(|r| !r.trim().is_empty()) {
++                    let (a, b) = rel.split_once('<').expect("SELGEN_START: a<b");
++                    let a: u8 = a.trim().parse().unwrap();
++                    let b: u8 = b.trim().parse().unwrap();
++                    assert!(!poset.is_less(b, a), "SELGEN_START: contradictory relation");
++                    poset.add_and_close(a, b);
++                    comparisons_done += 1;
++                }
++                println!("[patch] start poset with {} comparisons spent", comparisons_done);
++            }
+             if PAIR_WISE_OPTIMIZATION {
+                 println!("Attention: searching with pairwise-optimisation");
+                 for k in (0..self.n - 1).step_by(2) {
+@@ -175,6 +245,11 @@ impl<'a> Search<'a> {
+                     );
+                     println!("{}", format_duration(start));
+ 
++                    if self.budget.is_some() {
++                        println!("[patch] no algorithm within budget (exhaustive under first-solution mode); resolves: {}", self.resolves);
++                        return 0;
++                    }
++
+                     continue;
+                 }
+             };
+@@ -190,6 +265,9 @@ impl<'a> Search<'a> {
+             self.n, self.i
+         );
+         println!("Comparisons: {result}");
++        if self.budget.is_some() {
++            println!("[patch] budget: {:?}, resolves: {}, lb_map: {}, or_cs: {}, or_phi: {}, and_hard_first: {}, width: {}, table: {} entries, {} hits, {} cuts", self.budget, self.resolves, self.lb_map.len(), self.or_cs, self.or_phi, self.and_hard_first, self.width, self.table.len(), self.table_hits, self.table_cuts);
++        }
+         println!();
+ 
+         self.print_cache();
+@@ -217,8 +295,19 @@ impl<'a> Search<'a> {
+ 
+         if let Some(cost) = self.search_cache(&poset) {
+             match cost {
+-                Cost::Solved(_) => {
+-                    return cost;
++                Cost::Solved(solved) => {
++                    // [patch] in first-solution mode Solved(v) is only an upper
++                    // bound; if it exceeds the current budget, search again.
++                    if self.budget.is_some() && solved > max_comparisons {
++                        if let Some(&lb) = self.lb_map.get(&poset) {
++                            if lb > max_comparisons {
++                                return Cost::Minimum(lb);
++                            }
++                        }
++                        self.resolves += 1;
++                    } else {
++                        return cost;
++                    }
+                 }
+                 Cost::Minimum(min) => {
+                     if min > max_comparisons {
+@@ -228,6 +317,18 @@ impl<'a> Search<'a> {
+             }
+         }
+ 
++        if !self.table.is_empty() && poset.n() <= self.table_maxn {
++            if let Some(&v) = self.table.get(&poset.to_backward()) {
++                self.table_hits += 1;
++                if v > max_comparisons {
++                    self.table_cuts += 1;
++                    let result = Cost::Minimum(v);
++                    self.insert_cache(poset, result);
++                    return result;
++                }
++            }
++        }
++
+         if self.use_bidirectional_search {
+             let read_lock = backward_search_state
+                 .read()
+@@ -252,7 +353,67 @@ impl<'a> Search<'a> {
+             return result;
+         }
+ 
+-        let pairs = poset.get_comparison_pairs();
++        let mut pairs = poset.get_comparison_pairs();
++        if self.or_phi {
++            let phi_of = |p: &PseudoCanonifiedPoset| {
++                let (c, fg, fgd, _) = p.lb_stats();
++                fg + fgd - c
++            };
++            let (seed, noise) = (self.seed, self.noise);
++            let jitter = |a: &PseudoCanonifiedPoset, b: &PseudoCanonifiedPoset, x: u64| -> u64 {
++                if noise <= 0.0 {
++                    return x;
++                }
++                use std::hash::{Hash, Hasher};
++                let mut h = std::collections::hash_map::DefaultHasher::new();
++                seed.hash(&mut h);
++                a.hash(&mut h);
++                b.hash(&mut h);
++                let u = (h.finish() >> 11) as f64 / (1u64 << 53) as f64;
++                (x as f64 * (1.0 + noise * u)) as u64
++            };
++            let mut keyed: Vec<_> = pairs
++                .into_iter()
++                .map(|(a, b, i, j)| {
++                    let pa = phi_of(&a);
++                    let pb = phi_of(&b);
++                    if pa >= pb {
++                        ((jitter(&a, &b, pa), pb), (a, b, i, j))
++                    } else {
++                        ((jitter(&a, &b, pb), pa), (b, a, i, j))
++                    }
++                })
++                .collect();
++            keyed.sort_by_key(|k| k.0);
++            pairs = keyed.into_iter().map(|k| k.1).collect();
++            if !self.and_hard_first {
++                pairs = pairs.into_iter().map(|(a, b, i, j)| (b, a, i, j)).collect();
++            }
++        } else if self.or_cs {
++            // [patch] key = (C of harder child, C of easier child); harder first
++            let mut keyed: Vec<_> = pairs
++                .into_iter()
++                .map(|(a, b, i, j)| {
++                    let ca = a.num_compatible_posets();
++                    let cb = b.num_compatible_posets();
++                    if ca >= cb {
++                        ((ca, cb), (a, b, i, j))
++                    } else {
++                        ((cb, ca), (b, a, i, j))
++                    }
++                })
++                .collect();
++            keyed.sort_by_key(|k| k.0);
++            pairs = keyed.into_iter().map(|k| k.1).collect();
++            if !self.and_hard_first {
++                pairs = pairs.into_iter().map(|(a, b, i, j)| (b, a, i, j)).collect();
++            }
++        } else if self.and_hard_first {
++            pairs = pairs.into_iter().map(|(a, b, i, j)| (b, a, i, j)).collect();
++        }
++        if pairs.len() > self.width {
++            pairs.truncate(self.width);
++        }
+         let n_pairs = pairs.len() as u64;
+ 
+         self.analytics.inc_length(depth, n_pairs);
+@@ -294,6 +455,11 @@ impl<'a> Search<'a> {
+             current_best = first_result.value().max(second_result.value()) + 1;
+ 
+             self.analytics.inc(depth, 1);
++
++            // [patch] first-solution mode: accept the first working comparison
++            if self.budget.is_some() {
++                break;
++            }
+         }
+ 
+         let result = if current_best <= max_comparisons {
+@@ -342,6 +508,21 @@ impl<'a> Search<'a> {
+                 }
+             }
+             WeightFunction::None => {}
++            WeightFunction::Phi => {
++                if poset.lb_best() > max_comparisons as u32 {
++                    return Some(false);
++                }
++            }
++            WeightFunction::PhiW => {
++                if poset.lb_best() > max_comparisons as u32 {
++                    return Some(false);
++                }
++                let scale = (1..=self.n).map(|k| k as u128).product();
++                let weight = poset.weight(depth as usize + max_comparisons as usize, scale);
++                if weight <= scale || (max_comparisons as u32) <= ((weight / scale) - 1).ilog2() {
++                    return Some(false);
++                }
++            }
+         }
+ 
+         
+@@ -536,3 +717,35 @@ impl Drop for Analytics {
+         self.complete_all();
+     }
+ }
++
++/// [patch] load the ground-truth table (see Search::table)
++fn load_table() -> HashMap<BackwardsPoset, u8> {
++    let mut map = HashMap::new();
++    let Ok(path) = std::env::var("SELGEN_TABLE") else { return map; };
++    let maxn: u8 = std::env::var("SELGEN_TABLE_MAXN").ok().and_then(|v| v.parse().ok()).unwrap_or(12);
++    let text = std::fs::read_to_string(&path).expect("SELGEN_TABLE: cannot read");
++    let t0 = Instant::now();
++    for line in text.lines() {
++        let f: Vec<&str> = line.split('\t').collect();
++        if f.len() < 4 { continue; }
++        let Ok(n) = f[0].parse::<u8>() else { continue; };
++        if n > maxn { continue; }
++        let i1: u8 = f[1].parse().unwrap();
++        let v: u8 = f[2].parse().unwrap();
++        let mut p = FreePoset::new(n, i1 - 1);
++        for (a, h) in f[3].split(',').enumerate() {
++            let mask = u32::from_str_radix(h, 16).unwrap();
++            for b in 0..n as u32 {
++                if mask >> b & 1 == 1 {
++                    p.add_and_close(a as u8, b as u8);
++                }
++            }
++        }
++        let key = p.canonified().to_backward();
++        if let Some(old) = map.insert(key, v) {
++            assert_eq!(old, v, "SELGEN_TABLE: inconsistent values for one normal form");
++        }
++    }
++    println!("[patch] table: {} entries (n <= {}) loaded in {:.1}s", map.len(), maxn, t0.elapsed().as_secs_f64());
++    map
++}
