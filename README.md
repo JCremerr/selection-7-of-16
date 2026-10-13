@@ -6,7 +6,7 @@ the 7th and the 8th. This repository contains comparison algorithms that find
 the 7th smallest of 16 elements with 28 comparisons and the 8th smallest with 29.
 Together with a published lower bound, this settles $V_7(16) = 28$. It also
 contains new bounds for 17 elements. Each algorithm is an explicit decision
-graph (a *certificate*), and every bound is checked three ways: by an
+graph (a *certificate*), and each new upper bound is checked three ways: by an
 independent static checker, by exhaustive and randomized execution, and by a
 formal proof in Lean 4.
 
@@ -41,7 +41,7 @@ the tables list $i \le \lceil n/2 \rceil$ only.
 | **now** | 16 | 20 | 22 | 25 | **27** | 28–**29** | 29–**30** | 29–**31** | 29–**31** |
 
 > [!NOTE]
-> This repository proves the **upper bounds**. The lower bound
+> This repository proves the **numerical upper bounds** listed above. The lower bound
 > $V_7(16) \ge 28$ is the computational result of Dörrer et al.,
 > *Exact Lower Bounds for the Number of Comparisons in Selection*, SEA 2025
 > ([doi:10.4230/LIPIcs.SEA.2025.16](https://doi.org/10.4230/LIPIcs.SEA.2025.16)).
@@ -57,6 +57,18 @@ the tables list $i \le \lceil n/2 \rceil$ only.
 | Exact path oracle | An independent re-implementation follows every path and gives the same worst case. | [`code/independent_checks`](code/independent_checks) |
 | Random execution | Each certificate compiled with `rustc` and run on $2\cdot10^7$ random permutations. | [`code/randtest`](code/randtest) |
 | Lean 4 proof | `∃ P, SelectsWithin P n r w` for all seven bounds, checked by the kernel and by `leanchecker`; standard axioms only. | [`code/lean`](code/lean) |
+
+## Lower-bound theory
+
+A separate [Lean 4 + Mathlib development](code/lean_lb) formalizes the
+analytical lower bounds of Section 5 for arbitrary finite partial orders
+and valid ranks. It proves the combined Fussenegger–Gabow weight bound,
+the KEY bound, and optimality within the stated family of weight functions.
+Start with its [specification](code/lean_lb/LB/Spec.lean),
+[final statements](code/lean_lb/LB/Main.lean), and
+[build instructions](code/lean_lb/README.md).
+These general bounds are separate from the published numerical lower bounds
+used to obtain the exact values above.
 
 ## Quick start
 
@@ -94,7 +106,7 @@ cd code/core && cargo build --release && target/release/dfpn 16 7 28 --out=found
 |:--|:--|:--|
 | Python 3 (tested with 3.12) | checker, oracle, analysis | standard library only, no packages |
 | Rust ≥ 1.75 (`cargo`, `rustc`) | random execution, search | [rustup.rs](https://rustup.rs) |
-| Lean 4 via `elan` | formal proofs | [elan](https://github.com/leanprover/elan); `lake build` fetches the pinned toolchain v4.34.1 automatically, no Mathlib |
+| Lean 4 via `elan` | formal proofs | [elan](https://github.com/leanprover/elan); `lake build` fetches the pinned toolchain v4.34.1 automatically; `code/lean` uses core Lean, `code/lean_lb` additionally uses pinned Mathlib |
 | g++ | exhaustive check of the lower bounds | any C++17 compiler |
 
 The Rust crates have no dependencies outside the standard library and are
@@ -110,7 +122,8 @@ into `external/selection_generator` (ignored by git).
 | [`certificates/`](certificates) | the 9 certificates (7 bounds; two have a second certificate), checksums and check outputs |
 | [`code/verifier/`](code/verifier) | static checker `verify_rs_algorithm.py`, its soundness proof (README) and test suite |
 | [`code/randtest/`](code/randtest) | compiled execution test on random permutations |
-| [`code/lean/`](code/lean) | Lean 4 development proving all seven bounds |
+| [`code/lean/`](code/lean) | Lean 4 development proving all seven numerical upper bounds |
+| [`code/lean_lb/`](code/lean_lb) | Lean 4 + Mathlib proofs of the universal lower-bound theory in Section 5 |
 | [`code/core/`](code/core), [`code/core32/`](code/core32) | search: df-pn construction, exact solver, lower bounds ($n \le 16$ and $n \le 19$) |
 | [`code/upstream/`](code/upstream) | patches to the search code of Dörrer et al. (fixed budget, information-greedy ordering) |
 | [`code/analysis/`](code/analysis) | scripts behind the lower-bound evaluation and the structure of the 28-comparison algorithm |
